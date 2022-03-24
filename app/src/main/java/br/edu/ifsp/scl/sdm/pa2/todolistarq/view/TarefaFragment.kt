@@ -1,36 +1,44 @@
 package br.edu.ifsp.scl.sdm.pa2.todolistarq.view
 
-import android.os.AsyncTask
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.GONE
 import android.view.ViewGroup
 import androidx.fragment.app.setFragmentResult
+import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.R
-import br.edu.ifsp.scl.sdm.pa2.todolistarq.controller.TarefaController
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.databinding.FragmentTarefaBinding
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.model.database.ToDoListArqDatabase
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.model.entity.Tarefa
+import br.edu.ifsp.scl.sdm.pa2.todolistarq.presenter.TarefaPresenter
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.view.BaseFragment.Constantes.ACAO_TAREFA_EXTRA
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.view.BaseFragment.Constantes.CONSULTA
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.view.BaseFragment.Constantes.ID_INEXISTENTE
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.view.BaseFragment.Constantes.TAREFA_EXTRA
 import br.edu.ifsp.scl.sdm.pa2.todolistarq.view.BaseFragment.Constantes.TAREFA_REQUEST_KEY
+import br.edu.ifsp.scl.sdm.pa2.todolistarq.viewmodel.TarefaViewModel
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class TarefaFragment : BaseFragment() {
     private lateinit var fragmentTarefaBinding: FragmentTarefaBinding
     private var tarefaExtraId: Long = ID_INEXISTENTE
     private lateinit var database: ToDoListArqDatabase
-    private lateinit var tarefaController: TarefaController
+    private lateinit var tarefaViewModel: TarefaViewModel
 
     private var fab: FloatingActionButton? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Instanciando o controlador
-        tarefaController = TarefaController(this)
+        // Instanciando o viewModel
+        tarefaViewModel = ViewModelProvider
+            .AndroidViewModelFactory(requireActivity().application)
+            .create(TarefaViewModel::class.java)
+
+        // Observando o view model
+        tarefaViewModel.recuperarTarefa().observe(this) { tarefa ->
+            retornaTarefa(tarefa)
+        }
 
         // Escondendo botão de adicionar tarefa
         fab = activity?.findViewById(R.id.novaTarefaFab)
@@ -52,7 +60,7 @@ class TarefaFragment : BaseFragment() {
         fragmentTarefaBinding.salvarTarefaBt.setOnClickListener {
             if (tarefaExtraId != ID_INEXISTENTE) {
                 // Atualiza no banco
-                tarefaController.atualizaTarefa(
+                tarefaViewModel.atualizaTarefa(
                     Tarefa(
                         tarefaExtraId.toInt(),
                         fragmentTarefaBinding.nomeTarefaEt.text.toString(),
@@ -62,7 +70,7 @@ class TarefaFragment : BaseFragment() {
             }
             else {
                 // Insere tarefa no banco
-                tarefaController.insereTarefa(
+                tarefaViewModel.insereTarefa(
                     Tarefa(
                         nome = fragmentTarefaBinding.nomeTarefaEt.text.toString(),
                         realizada = if (fragmentTarefaBinding.realizadaTarefaCb.isChecked) 1 else 0
@@ -98,7 +106,7 @@ class TarefaFragment : BaseFragment() {
         fab?.visibility = View.VISIBLE
     }
 
-    fun retornaTarefa(tarefa: Tarefa) {
+    override fun retornaTarefa(tarefa: Tarefa) {
         setFragmentResult(TAREFA_REQUEST_KEY, Bundle().also {
             it.putParcelable(TAREFA_EXTRA, tarefa)
         })
